@@ -1,0 +1,22 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: smartcity-mosquitto
+    ports:
+      - "1883:1883" # MQTT
+      - "9001:9001" # MQTT over WebSockets
+    volumes:
+      - ./backend/docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    container_name: smartcity-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongo-data:
