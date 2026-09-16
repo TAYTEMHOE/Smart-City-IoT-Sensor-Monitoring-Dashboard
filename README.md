@@ -23,7 +23,7 @@ run instructions, payload schema, thresholds, and assumptions, will be expanded 
 each piece lands.
 
 - [x] F1 — MQTT Broker Setup
-- [ ] F2 — Sensor Simulator
+- [x] F2 — Sensor Simulator
 - [ ] F3 — MQTT Ingestion
 - [ ] F4 — Readings Persistence
 - [ ] F5 — GET /readings Endpoint
@@ -69,7 +69,44 @@ You should see the message printed in terminal 1. (`mosquitto_sub`/`mosquitto_pu
 come from the `mosquitto-clients` package — `apt install mosquitto-clients` /
 `brew install mosquitto`.)
 
-### 2. Backend, frontend, simulator
+### 2. Sensor simulator
+
+A standalone Node/TS process that publishes fake readings for 3 sensors — `temp-01`
+(temperature), `hum-01` (humidity), `aq-01` (air_quality) — each on its own interval
+(3s/4s/5s), to `smartcity/sensors/{sensorId}/reading`. The payload shape matches the
+backend's inbound schema exactly:
+
+```json
+{
+  "sensorId": "temp-01",
+  "sensorType": "temperature",
+  "value": 22.5,
+  "unit": "°C",
+  "timestamp": "2026-09-16T09:00:00.000Z"
+}
+```
+
+Each sensor mostly emits values inside its normal range, but with a configurable
+probability (`SIM_SPIKE_PROBABILITY`, default `0.15`) emits a value from a range
+deliberately outside the backend's alert thresholds (see §"Threshold values" below),
+so alerting has something to react to during a demo.
+
+```bash
+cd simulator
+npm install
+cp .env.example .env   # defaults are fine for local dev
+npm start               # or: npm run dev (auto-restart on change)
+```
+
+Config (`simulator/.env`):
+
+| Var | Default | Purpose |
+|---|---|---|
+| `MQTT_URL` | `mqtt://localhost:1883` | Broker to publish to |
+| `SIM_SPIKE_PROBABILITY` | `0.15` | Chance a reading is generated out-of-threshold |
+| `SIM_PUBLISH_INTERVAL_MS` | _(unset)_ | Overrides every sensor's own interval with one fixed value |
+
+### 3. Backend, frontend
 
 _To be documented as each piece is implemented._
 
