@@ -24,7 +24,7 @@ each piece lands.
 
 - [x] F1 — MQTT Broker Setup
 - [x] F2 — Sensor Simulator
-- [ ] F3 — MQTT Ingestion
+- [x] F3 — MQTT Ingestion
 - [ ] F4 — Readings Persistence
 - [ ] F5 — GET /readings Endpoint
 - [ ] F6 — Threshold-Based Alerting
@@ -106,7 +106,38 @@ Config (`simulator/.env`):
 | `SIM_SPIKE_PROBABILITY` | `0.15` | Chance a reading is generated out-of-threshold |
 | `SIM_PUBLISH_INTERVAL_MS` | _(unset)_ | Overrides every sensor's own interval with one fixed value |
 
-### 3. Backend, frontend
+### 3. Backend
+
+```bash
+cd backend
+npm install
+cp .env.example .env   # defaults match docker-compose (mongo + mosquitto on localhost)
+npm run start:dev
+```
+
+On startup, `MqttModule` connects to the broker (`MQTT_URL`, `reconnectPeriod: 2000`ms
+so a dropped connection retries automatically) and `IngestionModule` subscribes to the
+wildcard topic `MQTT_READING_TOPIC` (default `smartcity/sensors/+/reading`).
+
+**Ingestion pipeline**, per message received:
+
+1. Parse the payload as JSON. If it isn't valid JSON, log a warning and drop it.
+2. Validate against the same Zod schema documented above (§2). If validation fails,
+   log a warning (with the Zod error) and drop it — a bad reading never crashes the
+   ingestion process.
+3. Persist the validated reading via `ReadingsService` (adds server-side `receivedAt`
+   and `isAlert: false`).
+4. Evaluate the persisted reading against its sensor type's threshold via
+   `AlertsService`; if it crosses a bound, an `Alert` document is created and the
+   reading is flagged `isAlert: true`.
+
+Run the backend's unit tests (`MqttService`, `IngestionService`, `AlertsService`) with:
+
+```bash
+npm test
+```
+
+### 4. Frontend
 
 _To be documented as each piece is implemented._
 
