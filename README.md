@@ -25,7 +25,7 @@ each piece lands.
 - [x] F1 — MQTT Broker Setup
 - [x] F2 — Sensor Simulator
 - [x] F3 — MQTT Ingestion
-- [ ] F4 — Readings Persistence
+- [x] F4 — Readings Persistence
 - [ ] F5 — GET /readings Endpoint
 - [ ] F6 — Threshold-Based Alerting
 - [ ] F7 — GET /alerts Endpoint
@@ -131,7 +131,20 @@ wildcard topic `MQTT_READING_TOPIC` (default `smartcity/sensors/+/reading`).
    `AlertsService`; if it crosses a bound, an `Alert` document is created and the
    reading is flagged `isAlert: true`.
 
-Run the backend's unit tests (`MqttService`, `IngestionService`, `AlertsService`) with:
+**Readings persistence** (`ReadingsService`, backed by the `readings` MongoDB
+collection):
+
+- Every valid ingested reading results in exactly one `Reading` document — `create()`
+  is called once per message from the ingestion pipeline.
+- Each document stores both `timestamp` (from the sensor payload) and `receivedAt`
+  (server clock at persist time), plus `isAlert` (defaults to `false`, flipped to
+  `true` by a separate `markAsAlert()` call if `AlertsService` fires).
+- Persistence failures are logged with the offending `sensorId` and rethrown — never
+  silently swallowed — so the ingestion pipeline's catch-all can log and move on to
+  the next message without crashing the process.
+
+Run the backend's unit tests (`MqttService`, `IngestionService`, `ReadingsService`,
+`AlertsService`) with:
 
 ```bash
 npm test
